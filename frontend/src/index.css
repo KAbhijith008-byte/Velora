@@ -12,3 +12,11 @@
     0 8px 32px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
+/* cmdk base styles */
+[cmdk-group-heading] {
+  padding: 0 8px;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: rgba(255, 255, 255, 0.08);
+}

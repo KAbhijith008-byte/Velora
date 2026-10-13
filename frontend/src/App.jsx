@@ -8,9 +8,13 @@ import Skeleton from "./components/states/Skeleton";
 import ErrorMessage from "./components/states/ErrorMessage";
 import UnitToggle from "./components/features/UnitToggle";
 import HistoryChips from "./components/features/HistoryChips";
+import ShareCard from "./components/features/ShareCard";
+import CommandPalette from "./components/features/CommandPalette";
+import WeatherBackground from "./components/visuals/WeatherBackground";
 import { useCurrentWeather, useForecast } from "./hooks/useWeather";
 import { useUnit } from "./hooks/useUnit";
 import { useHistory } from "./hooks/useHistory";
+import { useCommandPalette } from "./hooks/useCommandPalette";
 import { getGradient, codeToCondition } from "./utils/weatherMap";
 import { getAccentForTemp } from "./utils/color";
 
@@ -18,6 +22,7 @@ export default function App() {
   const [city, setCity] = useState("");
   const { unit, toggleUnit } = useUnit();
   const { history, addToHistory, clearHistory } = useHistory();
+  const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
 
   const currentQuery = useCurrentWeather(city);
   const forecastQuery = useForecast(city);
@@ -27,7 +32,6 @@ export default function App() {
     currentQuery.error?.message || forecastQuery.error?.message || null;
   const hasData = currentQuery.data && forecastQuery.data;
 
-  // Update accent color when temperature changes
   useEffect(() => {
     if (currentQuery.data?.current?.temperature_2m !== undefined) {
       const accent = getAccentForTemp(currentQuery.data.current.temperature_2m);
@@ -35,9 +39,11 @@ export default function App() {
     }
   }, [currentQuery.data]);
 
-  const gradient = currentQuery.data
-    ? getGradient(codeToCondition(currentQuery.data.current.weather_code))
-    : getGradient("Clear");
+  const condition = currentQuery.data
+    ? codeToCondition(currentQuery.data.current.weather_code)
+    : "Clear";
+
+  const gradient = getGradient(condition);
 
   const handleSearch = (searchedCity) => {
     setCity(searchedCity);
@@ -68,13 +74,20 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col items-center px-6 pt-8 pb-16 relative overflow-hidden">
+      {/* Animated canvas background */}
+      <WeatherBackground
+        weatherCode={currentQuery.data?.current?.weather_code}
+      />
+
+    
+      {/* Condition gradient */}
       <div
         className="absolute inset-0 -z-10 pointer-events-none transition-all duration-700"
         style={{ background: gradient }}
         aria-hidden="true"
       />
 
-      <header className="w-full max-w-3xl flex items-center justify-between mb-8">
+      <header className="w-full max-w-3xl flex items-center justify-between mb-8 relative z-10">
         <div className="flex items-center gap-3">
           <svg
             width="44"
@@ -109,56 +122,90 @@ export default function App() {
           </div>
         </div>
 
-        <UnitToggle unit={unit} onToggle={toggleUnit} />
+        <div className="flex items-center gap-3">
+          {hasData && (
+            <ShareCard
+              current={currentQuery.data.current}
+              location={currentQuery.data.location}
+              unit={unit}
+            />
+          )}
+          <UnitToggle unit={unit} onToggle={toggleUnit} />
+        </div>
       </header>
 
-      <SearchBar
-        onSearch={handleSearch}
-        onUseLocation={handleLocation}
-        loading={loading}
-      />
+      <div className="w-full max-w-3xl relative z-10">
+        <SearchBar
+          onSearch={handleSearch}
+          onUseLocation={handleLocation}
+          loading={loading}
+        />
 
-      <HistoryChips
-        history={history}
-        onSelect={handleSearch}
-        onClear={clearHistory}
-      />
+        <HistoryChips
+          history={history}
+          onSelect={handleSearch}
+          onClear={clearHistory}
+        />
 
-      <main className="w-full max-w-3xl">
-        {!city && (
-          <div className="glass px-8 py-10 text-center max-w-md mx-auto">
-            <p className="text-base mb-2">Search a city to begin</p>
-            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              Try Mumbai, London, Tokyo, or New York.
-            </p>
-          </div>
-        )}
+        <main>
+          {!city && (
+            <div className="glass px-8 py-10 text-center max-w-md mx-auto">
+              <p className="text-base mb-2">Search a city to begin</p>
+              <p
+                className="text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Try Mumbai, London, Tokyo, or New York.
+              </p>
+              <p
+                className="text-xs mt-4"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Tip: press ⌘K / Ctrl+K for the command palette
+              </p>
+            </div>
+          )}
 
-        {city && loading && <Skeleton />}
+          {city && loading && <Skeleton />}
 
-        {city && error && !loading && (
-          <ErrorMessage
-            message={error}
-            onRetry={() => {
-              currentQuery.refetch();
-              forecastQuery.refetch();
-            }}
-          />
-        )}
+          {city && error && !loading && (
+            <ErrorMessage
+              message={error}
+              onRetry={() => {
+                currentQuery.refetch();
+                forecastQuery.refetch();
+              }}
+            />
+          )}
 
-        {city && hasData && !loading && !error && (
-          <>
-            <CurrentWeather data={currentQuery.data} unit={unit} />
-            <WeatherDetails current={currentQuery.data.current} />
-            <HourlyChart hourly={forecastQuery.data.hourly} unit={unit} />
-            <ForecastList daily={forecastQuery.data.daily} unit={unit} />
-          </>
-        )}
-      </main>
+          {city && hasData && !loading && !error && (
+            <>
+              <CurrentWeather data={currentQuery.data} unit={unit} />
+              <WeatherDetails current={currentQuery.data.current} />
+              <HourlyChart hourly={forecastQuery.data.hourly} unit={unit} />
+              <ForecastList daily={forecastQuery.data.daily} unit={unit} />
+            </>
+          )}
+        </main>
+      </div>
 
-      <footer className="mt-16 text-xs" style={{ color: "var(--text-muted)" }}>
+      <footer
+        className="mt-16 text-xs relative z-10"
+        style={{ color: "var(--text-muted)" }}
+      >
         Velora · Weather, with a feeling.
       </footer>
+
+      {/* Command palette — mounted at root */}
+      <CommandPalette
+        open={paletteOpen}
+        setOpen={setPaletteOpen}
+        history={history}
+        onSearchCity={handleSearch}
+        onToggleUnit={toggleUnit}
+        onClearHistory={clearHistory}
+        onUseLocation={handleLocation}
+      />
     </div>
   );
 }
