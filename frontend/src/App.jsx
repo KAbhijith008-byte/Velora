@@ -1,26 +1,66 @@
+import { useState } from "react";
+import SearchBar from "./components/weather/SearchBar";
+import CurrentWeather from "./components/weather/CurrentWeather";
+import WeatherDetails from "./components/weather/WeatherDetails";
+import ForecastList from "./components/weather/ForecastList";
+import Skeleton from "./components/states/Skeleton";
+import ErrorMessage from "./components/states/ErrorMessage";
+import { useCurrentWeather, useForecast } from "./hooks/useWeather";
+import { getGradient, codeToCondition } from "./utils/weatherMap";
+
 export default function App() {
+  const [city, setCity] = useState("");
+  const [unit] = useState("C");
+
+  const currentQuery = useCurrentWeather(city);
+  const forecastQuery = useForecast(city);
+
+  const loading = currentQuery.isLoading || forecastQuery.isLoading;
+  const error =
+    currentQuery.error?.message || forecastQuery.error?.message || null;
+  const hasData = currentQuery.data && forecastQuery.data;
+
+ const gradient = currentQuery.data
+  ? getGradient(codeToCondition(currentQuery.data.current.weather_code))
+  : getGradient("Clear");
+
+  const handleLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const res = await fetch(
+            `/api/weather/coords?lat=${coords.latitude}&lon=${coords.longitude}`
+          );
+          const data = await res.json();
+          setCity(data.location.city || "Mumbai");
+        } catch {
+          alert("Could not fetch weather for your location");
+        }
+      },
+      () => alert("Location permission denied")
+    );
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
-      {/* Ambient glow */}
+    <div className="min-h-screen flex flex-col items-center px-6 pt-12 pb-16 relative overflow-hidden">
       <div
-        className="absolute inset-0 -z-10 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 30%, rgba(245, 158, 11, 0.15), transparent 60%)",
-        }}
+        className="absolute inset-0 -z-10 pointer-events-none transition-all duration-700"
+        style={{ background: gradient }}
         aria-hidden="true"
       />
 
-      {/* Logo mark */}
-      <div className="mb-8 flex items-center gap-4">
+      <header className="flex items-center gap-4 mb-10">
         <svg
-          width="72"
-          height="72"
+          width="52"
+          height="52"
           viewBox="0 0 72 72"
           fill="none"
           aria-hidden="true"
         >
-          {/* Sun arc */}
           <path
             d="M50 26 A22 22 0 1 0 40 50"
             stroke="var(--accent)"
@@ -28,7 +68,6 @@ export default function App() {
             strokeLinecap="round"
             fill="none"
           />
-          {/* Cloud */}
           <path
             d="M28 48 Q20 48 20 42 Q20 36 27 36 Q28 30 35 30 Q42 30 43 36 Q50 36 50 42 Q50 48 42 48 Z"
             stroke="var(--accent)"
@@ -36,45 +75,64 @@ export default function App() {
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Raindrops */}
           <circle cx="32" cy="55" r="1.5" fill="#60a5fa" />
           <circle cx="38" cy="58" r="1.5" fill="#60a5fa" />
           <circle cx="44" cy="55" r="1.5" fill="#60a5fa" />
         </svg>
-
         <div>
-          <h1 className="text-4xl font-semibold tracking-wide">VELORA</h1>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          <h1 className="text-2xl font-semibold tracking-wide">VELORA</h1>
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
             Weather, with a feeling.
           </p>
         </div>
-      </div>
+      </header>
 
-      {/* Hero text */}
-      <p
-        className="max-w-xl text-center mb-10 text-lg"
-        style={{ color: "var(--text-secondary)" }}
-      >
-        A cinematic weather dashboard that adapts to the sky.
-      </p>
+      <SearchBar
+        onSearch={setCity}
+        onUseLocation={handleLocation}
+        loading={loading}
+      />
 
-      {/* Placeholder card */}
-      <div className="glass px-8 py-6 text-center max-w-md w-full">
-        <p className="text-sm uppercase tracking-widest mb-2" style={{ color: "var(--text-muted)" }}>
-          Coming Soon
-        </p>
-        <p style={{ color: "var(--text-secondary)" }}>
-          Frontend scaffold ready. Search + weather UI lands next.
-        </p>
-      </div>
+      <main className="w-full max-w-3xl">
+        {!city && (
+          <div className="glass px-8 py-10 text-center max-w-md mx-auto">
+            <p className="text-base mb-2">Search a city to begin</p>
+            <p
+              className="text-sm"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Try Mumbai, London, Tokyo, or New York.
+            </p>
+          </div>
+        )}
 
-      {/* Footer */}
-      <p
-        className="absolute bottom-6 text-xs"
+        {city && loading && <Skeleton />}
+
+        {city && error && !loading && (
+          <ErrorMessage
+            message={error}
+            onRetry={() => {
+              currentQuery.refetch();
+              forecastQuery.refetch();
+            }}
+          />
+        )}
+
+        {city && hasData && !loading && !error && (
+          <>
+            <CurrentWeather data={currentQuery.data} unit={unit} />
+            <WeatherDetails current={currentQuery.data.current} />
+            <ForecastList daily={forecastQuery.data.daily} unit={unit} />
+          </>
+        )}
+      </main>
+
+      <footer
+        className="mt-16 text-xs"
         style={{ color: "var(--text-muted)" }}
       >
-        Built with care 🌤️
-      </p>
+        Velora · Weather, with a feeling.
+      </footer>
     </div>
   );
 }
