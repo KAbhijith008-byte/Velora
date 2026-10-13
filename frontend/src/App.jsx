@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import SearchBar from "./components/weather/SearchBar";
 import CurrentWeather from "./components/weather/CurrentWeather";
 import WeatherDetails from "./components/weather/WeatherDetails";
@@ -6,7 +6,9 @@ import ForecastList from "./components/weather/ForecastList";
 import HourlyChart from "./components/weather/HourlyChart";
 import Skeleton from "./components/states/Skeleton";
 import ErrorMessage from "./components/states/ErrorMessage";
+import OfflineBanner from "./components/states/OfflineBanner";
 import UnitToggle from "./components/features/UnitToggle";
+import SoundToggle from "./components/features/SoundToggle";
 import HistoryChips from "./components/features/HistoryChips";
 import ShareCard from "./components/features/ShareCard";
 import CommandPalette from "./components/features/CommandPalette";
@@ -15,6 +17,9 @@ import { useCurrentWeather, useForecast } from "./hooks/useWeather";
 import { useUnit } from "./hooks/useUnit";
 import { useHistory } from "./hooks/useHistory";
 import { useCommandPalette } from "./hooks/useCommandPalette";
+import { useSound } from "./hooks/useSound";
+import { useStream } from "./hooks/useStream";
+import { usePrefetch } from "./hooks/usePrefetch";
 import { getGradient, codeToCondition } from "./utils/weatherMap";
 import { getAccentForTemp } from "./utils/color";
 
@@ -32,16 +37,25 @@ export default function App() {
     currentQuery.error?.message || forecastQuery.error?.message || null;
   const hasData = currentQuery.data && forecastQuery.data;
 
+  const condition = currentQuery.data
+    ? codeToCondition(currentQuery.data.current.weather_code)
+    : "Clear";
+
+  const { soundEnabled, toggleSound } = useSound(condition);
+
+  // Real-time SSE updates
+  useStream(city, useCallback(() => {}, []));
+
+  // Prefetch top 3 history cities on idle
+  usePrefetch(history);
+
+  // Dynamic accent color
   useEffect(() => {
     if (currentQuery.data?.current?.temperature_2m !== undefined) {
       const accent = getAccentForTemp(currentQuery.data.current.temperature_2m);
       document.documentElement.style.setProperty("--accent", accent);
     }
   }, [currentQuery.data]);
-
-  const condition = currentQuery.data
-    ? codeToCondition(currentQuery.data.current.weather_code)
-    : "Clear";
 
   const gradient = getGradient(condition);
 
@@ -74,13 +88,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col items-center px-6 pt-8 pb-16 relative overflow-hidden">
-      {/* Animated canvas background */}
       <WeatherBackground
         weatherCode={currentQuery.data?.current?.weather_code}
       />
 
-    
-      {/* Condition gradient */}
       <div
         className="absolute inset-0 -z-10 pointer-events-none transition-all duration-700"
         style={{ background: gradient }}
@@ -130,6 +141,7 @@ export default function App() {
               unit={unit}
             />
           )}
+          <SoundToggle enabled={soundEnabled} onToggle={toggleSound} />
           <UnitToggle unit={unit} onToggle={toggleUnit} />
         </div>
       </header>
@@ -151,16 +163,10 @@ export default function App() {
           {!city && (
             <div className="glass px-8 py-10 text-center max-w-md mx-auto">
               <p className="text-base mb-2">Search a city to begin</p>
-              <p
-                className="text-sm"
-                style={{ color: "var(--text-secondary)" }}
-              >
+              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
                 Try Mumbai, London, Tokyo, or New York.
               </p>
-              <p
-                className="text-xs mt-4"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-xs mt-4" style={{ color: "var(--text-muted)" }}>
                 Tip: press ⌘K / Ctrl+K for the command palette
               </p>
             </div>
@@ -196,7 +202,6 @@ export default function App() {
         Velora · Weather, with a feeling.
       </footer>
 
-      {/* Command palette — mounted at root */}
       <CommandPalette
         open={paletteOpen}
         setOpen={setPaletteOpen}
@@ -206,6 +211,8 @@ export default function App() {
         onClearHistory={clearHistory}
         onUseLocation={handleLocation}
       />
+
+      <OfflineBanner />
     </div>
   );
 }

@@ -3,8 +3,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import weatherRoutes from "./routes/weather.js";
+import streamRoutes from "./routes/stream.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
+import { startPoller } from "./services/poller.js";
 
 dotenv.config();
 
@@ -23,9 +25,11 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/weather", apiLimiter, weatherRoutes);
+app.use("/api/stream", streamRoutes);
 
 app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`✅ Velora API running at http://localhost:${PORT}`);
+  startPoller();
 });
