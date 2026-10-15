@@ -1,14 +1,13 @@
+import "dotenv/config"; 
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 
 import weatherRoutes from "./routes/weather.js";
 import streamRoutes from "./routes/stream.js";
+import historyRoutes from "./routes/history.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { startPoller } from "./services/poller.js";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,6 +25,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/weather", apiLimiter, weatherRoutes);
 app.use("/api/stream", streamRoutes);
+app.use("/api/history", apiLimiter, historyRoutes);
 
 app.use(errorHandler);
 
