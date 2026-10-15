@@ -26,3 +26,11 @@ export function formatHour(iso) {
     hour12: true,
   });
 }
+export function formatDate(isoDate) {
+  if (!isoDate) return "";
+  const date = new Date(isoDate);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}

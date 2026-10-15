@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { getWeather } from "../../utils/weatherMap";
-import { formatTemp, formatDay } from "../../utils/temperature";
+import { formatTemp, formatDay, formatDate } from "../../utils/temperature";
 
 export default function ForecastCard({ day, index, unit }) {
   const weather = getWeather(day.weather_code);
@@ -19,10 +19,17 @@ export default function ForecastCard({ day, index, unit }) {
       className="glass px-4 py-5 text-center min-w-[120px]"
     >
       <p
-        className="text-xs uppercase tracking-wider mb-2"
+        className="text-xs uppercase tracking-wider mb-1"
         style={{ color: "var(--text-muted)" }}
       >
         {formatDay(day.time, index)}
+      </p>
+
+      <p
+        className="text-[10px] tracking-wide mb-2"
+        style={{ color: "var(--text-muted)", opacity: 0.7 }}
+      >
+        {formatDate(day.time)}
       </p>
 
       <div className="text-3xl mb-3" aria-hidden="true">
