@@ -18,8 +18,7 @@ function DetailCard({ icon: Icon, label, value, index }) {
       initial="hidden"
       animate="visible"
       custom={index}
-      className="glass px-5 py-4 flex items-center gap-4"
-    >
+className="glass glass-hover px-5 py-4 flex items-center gap-4"    >
       <Icon size={22} style={{ color: "var(--accent)" }} />
       <div className="text-left">
         <p

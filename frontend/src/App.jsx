@@ -22,6 +22,8 @@ import { useStream } from "./hooks/useStream";
 import { usePrefetch } from "./hooks/usePrefetch";
 import { getGradient, codeToCondition } from "./utils/weatherMap";
 import { getAccentForTemp } from "./utils/color";
+import ErrorBoundary from "./components/ui/ErrorBoundary";
+
 
 export default function App() {
   const [city, setCity] = useState("");
@@ -41,7 +43,7 @@ export default function App() {
     ? codeToCondition(currentQuery.data.current.weather_code)
     : "Clear";
 
-  const { soundEnabled, toggleSound } = useSound(condition);
+  const { soundEnabled, toggleSound, soundUnavailable } = useSound(condition);
 
   // Real-time SSE updates
   useStream(city, useCallback(() => {}, []));
@@ -75,14 +77,26 @@ export default function App() {
           const res = await fetch(
             `/api/weather/coords?lat=${coords.latitude}&lon=${coords.longitude}`
           );
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Failed to fetch weather");
+          }
           const data = await res.json();
           const detected = data.location.city || "Your location";
           handleSearch(detected);
-        } catch {
-          alert("Could not fetch weather for your location");
+        } catch (err) {
+          alert(`Could not fetch weather: ${err.message}`);
         }
       },
-      () => alert("Location permission denied")
+      (err) => {
+        const messages = {
+          1: "Location permission denied. Enable it in browser settings.",
+          2: "Location unavailable. Check your GPS or network.",
+          3: "Location request timed out. Try again.",
+        };
+        alert(messages[err.code] || "Location error");
+      },
+      { timeout: 10000, maximumAge: 60000, enableHighAccuracy: false }
     );
   };
 
@@ -141,7 +155,11 @@ export default function App() {
               unit={unit}
             />
           )}
-          <SoundToggle enabled={soundEnabled} onToggle={toggleSound} />
+          <SoundToggle
+            enabled={soundEnabled}
+            onToggle={toggleSound}
+            unavailable={soundUnavailable}
+          />
           <UnitToggle unit={unit} onToggle={toggleUnit} />
         </div>
       </header>
@@ -185,13 +203,25 @@ export default function App() {
           )}
 
           {city && hasData && !loading && !error && (
-            <>
-              <CurrentWeather data={currentQuery.data} unit={unit} />
-              <WeatherDetails current={currentQuery.data.current} />
-              <HourlyChart hourly={forecastQuery.data.hourly} unit={unit} />
-              <ForecastList daily={forecastQuery.data.daily} unit={unit} />
-            </>
-          )}
+  <>
+    <ErrorBoundary label="Current weather failed">
+      <CurrentWeather data={currentQuery.data} unit={unit} />
+    </ErrorBoundary>
+
+    <ErrorBoundary label="Details failed">
+      <WeatherDetails current={currentQuery.data.current} />
+    </ErrorBoundary>
+
+    <ErrorBoundary label="Hourly chart failed">
+      <HourlyChart hourly={forecastQuery.data.hourly} unit={unit} />
+    </ErrorBoundary>
+
+    <ErrorBoundary label="Forecast failed">
+      <ForecastList daily={forecastQuery.data.daily} unit={unit} />
+    </ErrorBoundary>
+  </>
+)}
+
         </main>
       </div>
 
@@ -202,6 +232,7 @@ export default function App() {
         Velora · Weather, with a feeling.
       </footer>
 
+    <ErrorBoundary label="Command palette failed">
       <CommandPalette
         open={paletteOpen}
         setOpen={setPaletteOpen}
@@ -211,6 +242,8 @@ export default function App() {
         onClearHistory={clearHistory}
         onUseLocation={handleLocation}
       />
+      </ErrorBoundary>
+      
 
       <OfflineBanner />
     </div>

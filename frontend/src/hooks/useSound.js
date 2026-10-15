@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 
 const SOUND_MAP = {
@@ -17,13 +17,14 @@ export function useSound(condition) {
   const audioRef = useRef(null);
   const fadeRef = useRef(null);
   const [enabled, setEnabled] = useLocalStorage("velora:sound", false);
+  const [unavailable, setUnavailable] = useState(false);
 
-  // Init audio once
+  // Init audio element once
   useEffect(() => {
     const audio = new Audio();
     audio.loop = true;
     audio.volume = 0;
-    audio.preload = "auto";
+    audio.preload = "none";
     audioRef.current = audio;
 
     return () => {
@@ -54,7 +55,19 @@ export function useSound(condition) {
     }, stepTime);
   }, []);
 
-  // React to condition changes WHILE enabled
+  // Check if sound file exists (HEAD request, cheap)
+  const checkAudioAvailable = useCallback(async (src) => {
+    try {
+      const res = await fetch(src, { method: "HEAD" });
+      if (!res.ok) return false;
+      const type = res.headers.get("content-type") || "";
+      return type.startsWith("audio");
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // React to condition changes while enabled
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !enabled) return;
@@ -72,7 +85,7 @@ export function useSound(condition) {
     });
   }, [condition, enabled, fadeTo]);
 
-  // Toggle — play() runs INSIDE the click handler for autoplay allowance
+  // Toggle — play() runs inside click handler for autoplay allowance
   const toggleSound = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -85,6 +98,15 @@ export function useSound(condition) {
     }
 
     const src = SOUND_MAP[condition] || SOUND_MAP.Clear;
+
+    // Check if file exists
+    const available = await checkAudioAvailable(src);
+    if (!available) {
+      setUnavailable(true);
+      setTimeout(() => setUnavailable(false), 4000);
+      return;
+    }
+
     audio.src = src;
     audio.load();
 
@@ -93,12 +115,9 @@ export function useSound(condition) {
       fadeTo(TARGET_VOLUME);
       setEnabled(true);
     } catch (err) {
-      console.error("Autoplay blocked:", err.message);
-      alert(
-        "Your browser blocked audio. Click anywhere on the page first, then try again."
-      );
+      console.warn("Autoplay blocked:", err.message);
     }
-  }, [condition, enabled, fadeTo, setEnabled]);
+  }, [condition, enabled, fadeTo, setEnabled, checkAudioAvailable]);
 
-  return { soundEnabled: enabled, toggleSound };
+  return { soundEnabled: enabled, toggleSound, soundUnavailable: unavailable };
 }

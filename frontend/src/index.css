@@ -34,3 +34,33 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+/* Button press feedback */
+button:not(:disabled):active {
+  transform: scale(0.97);
+  transition: transform 100ms ease;
+}
+
+/* Chip hover lift */
+.chip {
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.08);
+}
+
+/* Glass hover intensification */
+.glass-hover {
+  transition: box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+.glass-hover:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Smooth focus ring */
+*:focus-visible {
+  transition: outline-color 150ms ease;
+}

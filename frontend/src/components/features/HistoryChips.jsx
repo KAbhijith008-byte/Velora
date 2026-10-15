@@ -23,8 +23,7 @@ export default function HistoryChips({ history, onSelect, onClear }) {
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.2 }}
             onClick={() => onSelect(city)}
-            className="glass px-3 py-1 text-sm hover:brightness-125 transition"
-          >
+className="glass chip px-3 py-1 text-sm"          >
             {city}
           </motion.button>
         ))}
