@@ -8,15 +8,21 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
-  "keywords": ["weather", "api", "velora"],
+  "keywords": [
+    "weather",
+    "api",
+    "velora"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
-    "node-cache": "^5.1.2"
+    "node-cache": "^5.1.2",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
