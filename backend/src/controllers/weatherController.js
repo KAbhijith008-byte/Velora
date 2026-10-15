@@ -1,6 +1,4 @@
-import { geocodeCity, fetchWeather } from "../services/weatherService.js";
-
-/**
+import { geocodeCity, fetchWeather, reverseGeocode } from "../services/weatherService.js";/**
  * GET /api/weather/current/:city
  */
 export async function getCurrent(req, res, next) {
@@ -54,15 +52,16 @@ export async function getByCoords(req, res, next) {
     }
 
     const weather = await fetchWeather(lat, lon);
+    const place = await reverseGeocode(lat, lon);
 
     res.json({
       location: {
         latitude: Number(lat),
         longitude: Number(lon),
-        city: "Your location",
-        country: "",
-        countryCode: "",
-        region: null,
+        city: place?.city || "Your location",
+        country: place?.country || "",
+        countryCode: place?.countryCode || "",
+        region: place?.region || null,
       },
       current: weather.current,
       units: weather.current_units,

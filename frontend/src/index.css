@@ -20,3 +20,10 @@
 [cmdk-item][data-selected="true"] {
   background: rgba(255, 255, 255, 0.08);
 }
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

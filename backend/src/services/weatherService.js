@@ -81,3 +81,24 @@ export async function fetchWeather(lat, lon) {
 
   return res.json();
 }
+/**
+ * Reverse geocode coordinates → city name.
+ * Open-Meteo has a separate endpoint for reverse geocoding? No — we use BigDataCloud's free API.
+ */
+export async function reverseGeocode(lat, lon) {
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      city: data.city || data.locality || data.principalSubdivision || null,
+      country: data.countryName || "",
+      countryCode: data.countryCode || "",
+      region: data.principalSubdivision || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
