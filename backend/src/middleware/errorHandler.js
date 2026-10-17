@@ -1,5 +1,6 @@
 export function errorHandler(err, req, res, next) {
-  console.error("❌ Error:", err.message);
+  // Force the error to print fully in Render logs
+  console.error("❌ ROUTE ERROR:", err.stack || err.message);
 
   const status = err.status || 500;
   const message = err.message || "Internal server error";

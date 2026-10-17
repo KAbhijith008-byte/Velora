@@ -15,6 +15,9 @@ async function fetchWithTimeout(url, timeout = 8000) {
   }
 }
 
+/**
+ * Convert a city name to coordinates
+ */
 export async function geocodeCity(city) {
   const url = `${GEO_URL}?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
 
@@ -22,7 +25,7 @@ export async function geocodeCity(city) {
     const res = await fetchWithTimeout(url);
     
     if (!res.ok) {
-      throw Object.assign(new Error("Geocoding service unavailable"), { status: 502 });
+      throw new Error(`Geocoding service returned ${res.status}`);
     }
 
     const data = await res.json();
@@ -34,11 +37,15 @@ export async function geocodeCity(city) {
 
     return { latitude, longitude, city: name, country, countryCode: country_code, region: admin1 || null };
   } catch (err) {
-    console.error("Geocode Error:", err.name, err.message);
+    console.error("🚨 GEOCODE NETWORK ERROR:", err.name, "-", err.message);
+    if (err.cause) console.error("🚨 GEOCODE CAUSE:", err.cause);
     throw Object.assign(new Error("Geocoding service unavailable"), { status: 502 });
   }
 }
 
+/**
+ * Fetch current weather + forecast
+ */
 export async function fetchWeather(lat, lon) {
   const params = new URLSearchParams({
     latitude: lat,
@@ -56,16 +63,20 @@ export async function fetchWeather(lat, lon) {
     const res = await fetchWithTimeout(url);
     
     if (!res.ok) {
-      throw Object.assign(new Error("Weather service unavailable"), { status: 502 });
+      throw new Error(`Weather service returned ${res.status}`);
     }
     
     return res.json();
   } catch (err) {
-    console.error("Weather Fetch Error:", err.name, err.message);
+    console.error("🚨 WEATHER NETWORK ERROR:", err.name, "-", err.message);
+    if (err.cause) console.error("🚨 WEATHER CAUSE:", err.cause);
     throw Object.assign(new Error("Weather service unavailable"), { status: 502 });
   }
 }
 
+/**
+ * Reverse geocode
+ */
 export async function reverseGeocode(lat, lon) {
   try {
     const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
@@ -79,7 +90,7 @@ export async function reverseGeocode(lat, lon) {
       region: data.principalSubdivision || null,
     };
   } catch (err) {
-    console.error("Reverse Geocode Error:", err.name, err.message);
+    console.error("🚨 REVERSE GEOCODE ERROR:", err.name, "-", err.message);
     return null;
   }
 }
