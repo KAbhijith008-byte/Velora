@@ -42,6 +42,16 @@ app.use("/api/weather", apiLimiter, weatherRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/history", apiLimiter, historyRoutes);
 
+// RAW NETWORK TEST
+app.get("/ping-api", async (req, res) => {
+  try {
+    const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=51.5&longitude=-0.1&current=temperature_2m");
+    const text = await response.text();
+    res.status(200).send(`SUCCESS! Open-Meteo says: ${text.substring(0, 100)}`);
+  } catch (err) {
+    res.status(500).send(`FAILED! Real error: ${err.name} - ${err.message} | Cause: ${err.cause || 'none'}`);
+  }
+});
 app.use(errorHandler);
 
 app.listen(PORT, () => {
