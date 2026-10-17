@@ -108,3 +108,23 @@ export async function fetchWeather(lat, lon) {
     throw Object.assign(new Error("Weather service unavailable"), { status: 502 });
   }
 }
+export async function reverseGeocode(lat, lon) {
+  if (!API_KEY) return null;
+  try {
+    const url = `http://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${API_KEY}`;
+    const res = await fetchWithTimeout(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || data.length === 0) return null;
+    
+    return {
+      city: data[0].name || "Your location",
+      country: data[0].country || "",
+      countryCode: data[0].country || "",
+      region: data[0].state || null,
+    };
+  } catch (err) {
+    console.error("Reverse Geocode Error:", err.message);
+    return null;
+  }
+}
