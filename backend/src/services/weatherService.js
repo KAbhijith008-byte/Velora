@@ -1,3 +1,15 @@
+import { setGlobalDispatcher, Agent } from "undici";
+
+// Force IPv4 and set a timeout for all fetch requests to prevent Render network hangs
+setGlobalDispatcher(
+  new Agent({
+    connect: {
+      family: 4,
+      timeout: 10000, // 10 seconds
+    },
+  })
+);
+
 const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
 
@@ -6,33 +18,36 @@ const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
  */
 export async function geocodeCity(city) {
   const url = `${GEO_URL}?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
-  const res = await fetch(url);
 
-  if (!res.ok) {
-    throw Object.assign(new Error("Geocoding service unavailable"), {
-      status: 502,
-    });
+  try {
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`Geocoding Error (${res.status}):`, text);
+      throw Object.assign(new Error("Geocoding service unavailable"), { status: 502 });
+    }
+
+    const data = await res.json();
+
+    if (!data.results || data.results.length === 0) {
+      throw Object.assign(new Error(`City "${city}" not found`), { status: 404 });
+    }
+
+    const { latitude, longitude, name, country, country_code, admin1 } = data.results[0];
+
+    return {
+      latitude,
+      longitude,
+      city: name,
+      country,
+      countryCode: country_code,
+      region: admin1 || null,
+    };
+  } catch (err) {
+    console.error("Geocode Fetch Failed:", err.message, err.cause || "");
+    throw Object.assign(new Error("Geocoding service unavailable"), { status: 502 });
   }
-
-  const data = await res.json();
-
-  if (!data.results || data.results.length === 0) {
-    throw Object.assign(new Error(`City "${city}" not found`), {
-      status: 404,
-    });
-  }
-
-  const { latitude, longitude, name, country, country_code, admin1 } =
-    data.results[0];
-
-  return {
-    latitude,
-    longitude,
-    city: name,
-    country,
-    countryCode: country_code,
-    region: admin1 || null,
-  };
 }
 
 /**
@@ -71,19 +86,27 @@ export async function fetchWeather(lat, lon) {
     forecast_days: 7,
   });
 
-  const res = await fetch(`${WEATHER_URL}?${params}`);
+  const url = `${WEATHER_URL}?${params}`;
 
-  if (!res.ok) {
-    throw Object.assign(new Error("Weather service unavailable"), {
-      status: 502,
-    });
+  try {
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`Open-Meteo Error (${res.status}):`, text);
+      throw Object.assign(new Error("Weather service unavailable"), { status: 502 });
+    }
+    
+    return res.json();
+  } catch (err) {
+    // This logs the exact network failure (e.g., ENOTFOUND, ETIMEDOUT)
+    console.error("Weather Fetch Failed:", err.message, err.cause || "");
+    throw Object.assign(new Error("Weather service unavailable"), { status: 502 });
   }
-
-  return res.json();
 }
+
 /**
  * Reverse geocode coordinates → city name.
- * Open-Meteo has a separate endpoint for reverse geocoding? No — we use BigDataCloud's free API.
  */
 export async function reverseGeocode(lat, lon) {
   try {
@@ -97,8 +120,8 @@ export async function reverseGeocode(lat, lon) {
       countryCode: data.countryCode || "",
       region: data.principalSubdivision || null,
     };
-  } catch {
+  } catch (err) {
+    console.error("Reverse Geocode Failed:", err.message);
     return null;
   }
 }
-

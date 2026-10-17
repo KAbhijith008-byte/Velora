@@ -9,7 +9,22 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { startPoller } from "./services/poller.js";
 
-const app = express();
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://velora-henna-sigma.vercel.app", // ← replace with your real Vercel URL
+];
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // curl, mobile, same-origin
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
+
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());

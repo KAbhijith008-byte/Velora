@@ -22,7 +22,8 @@
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
     "node-cache": "^5.1.2",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "undici": "^8.12.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
