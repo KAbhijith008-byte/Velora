@@ -42,6 +42,25 @@ app.use("/api/weather", apiLimiter, weatherRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/history", apiLimiter, historyRoutes);
 
+// TEMPORARY DEBUG ROUTE
+app.get("/debug-weather", async (req, res) => {
+  try {
+    console.log("Fetching Open-Meteo...");
+    const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=51.5&longitude=-0.1&current=temperature_2m");
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error("DEBUG FETCH ERROR:", err);
+    res.status(500).json({ 
+      error: err.message, 
+      cause: err.cause?.message || err.cause || "No cause" 
+    });
+  }
+});
+
 app.use(errorHandler);
 
 app.listen(PORT, () => {
