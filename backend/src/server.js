@@ -1,6 +1,6 @@
-import "dotenv/config"; 
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 
 import weatherRoutes from "./routes/weather.js";
 import streamRoutes from "./routes/stream.js";
@@ -9,27 +9,17 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { startPoller } from "./services/poller.js";
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://velora-henna-sigma.vercel.app", // ← replace with your real Vercel URL
-];
+dotenv.config();
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // curl, mobile, same-origin
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      cb(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
-
+// 1. Initialize Express
+const app = express();
 const PORT = process.env.PORT || 5000;
 
+// 2. Middleware
 app.use(cors());
 app.use(express.json());
 
+// 3. Routes
 app.get("/", (req, res) => {
   res.json({
     status: "ok",
@@ -38,11 +28,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/api/weather", apiLimiter, weatherRoutes);
-app.use("/api/stream", streamRoutes);
-app.use("/api/history", apiLimiter, historyRoutes);
-
-// RAW NETWORK TEST
+// Temporary Network Test Route
 app.get("/ping-api", async (req, res) => {
   try {
     const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=51.5&longitude=-0.1&current=temperature_2m");
@@ -52,8 +38,15 @@ app.get("/ping-api", async (req, res) => {
     res.status(500).send(`FAILED! Real error: ${err.name} - ${err.message} | Cause: ${err.cause || 'none'}`);
   }
 });
+
+app.use("/api/weather", apiLimiter, weatherRoutes);
+app.use("/api/stream", streamRoutes);
+app.use("/api/history", apiLimiter, historyRoutes);
+
+// 4. Error Handler (must be last)
 app.use(errorHandler);
 
+// 5. Start Server
 app.listen(PORT, () => {
   console.log(`✅ Velora API running at http://localhost:${PORT}`);
   startPoller();
